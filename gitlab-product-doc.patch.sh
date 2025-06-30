@@ -8,6 +8,7 @@ app=gdocs
 
 ## Pull the base image
 docker pull $img
+
 ## Save IMAGE_ID NAME:TAG
 docker image ls --format "table {{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}" \
     |grep technical-writing \
@@ -15,6 +16,7 @@ docker image ls --format "table {{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}" \
 
 ## Scan for CVEs
 trivy image $img |tee trivy.log
+
 ## Create the build definition of the patch
 tee dockerfile <<EOH
 FROM $img 
@@ -52,5 +54,4 @@ docker logs $app
 ## Teardown (redundant)
 docker container stop $app 2>/dev/null
 docker container rm $app 2>/dev/null
-
 
