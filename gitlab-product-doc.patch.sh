@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
+## Patch CVEs reported by trivy scan 
+
 ## GitLab Product Documentation v18.1
 img=registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/archives:18.1
 patch='patch-0.0.1'
 app=gdocs
 
-## Patch CVEs reported by trivy scan 
-
-mkdir -p gitlab-product-doc
-pushd gitlab-product-doc/
-
-## 1. Pull the base image
+## Pull the base image
 docker pull $img
 ## Save IMAGE_ID NAME:TAG
-dit |grep technical-writing |tee image.log
+docker image ls --format "table {{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}" \
+    |grep technical-writing \
+    |tee image.log
+
 ## Scan for CVEs
 trivy image $img |tee trivy.log
 ## Create the build definition of the patch
