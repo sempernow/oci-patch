@@ -1,0 +1,40 @@
+ARG IMAGE_BASE=gcr.io/distroless/static
+ARG IMAGE_TARGET
+#ARG SOURCE=https://github.com/FiloSottile/age.git
+ARG SOURCE=https://gitlab.com/sempernow/age
+
+FROM golang:1.24.4-alpine AS builder
+
+ARG VERSION
+ARG SOURCE
+
+RUN apk add --no-cache git
+WORKDIR /build
+RUN git clone ${SOURCE}.git
+WORKDIR /build/age
+RUN CGO_ENABLED=0 go build -ldflags "-X 'main.Version=${VERSION}'" -o /age ./cmd/age
+
+FROM $IMAGE_BASE
+
+ARG DATE
+ARG VERSION
+ARG IMAGE_BASE
+ARG IMAGE_TARGET
+ARG SOURCE
+ARG COMMIT
+
+## Reference: OCI Annotations : Pre-Defined Keys 
+## https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+LABEL org.opencontainers.image.base.name="$IMAGE_BASE"
+LABEL org.opencontainers.image.created="$DATE"
+LABEL org.opencontainers.image.description="Fork of github.com/FiloSottile/age ${VERSION} has patch CVE-2025-22869 fixed golang.org/x/crypto/ssh v0.35.0"
+LABEL org.opencontainers.image.ref.name="$IMAGE_TARGET"
+LABEL org.opencontainers.image.revision="$COMMIT"
+LABEL org.opencontainers.image.source=$SOURCE
+LABEL org.opencontainers.image.title="age"
+LABEL org.opencontainers.image.version="$VERSION"
+
+COPY --from=builder /age /age
+
+ENTRYPOINT ["/age"]
+CMD ["--help"]

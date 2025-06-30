@@ -1,0 +1,95 @@
+## https://github.com/esnet/iperf 
+ARG DATE
+ARG VERSION
+ARG IMAGE_BASE=alpine:3.21.3
+ARG TAG
+ARG IMAGE_TARGET
+
+## Stage 1: Build iperf3 from source with hardening flags
+FROM $IMAGE_BASE AS builder
+
+ARG DATE
+ARG VERSION
+ARG TAG
+
+## Install build dependencies
+RUN apk add --no-cache \
+    build-base \
+    alpine-sdk \
+    autoconf \
+    automake \
+    libtool \
+    openssl-dev \
+    zlib-dev \
+    linux-headers
+
+## Download and verify iperf3 source
+WORKDIR /tmp
+RUN wget https://downloads.es.net/pub/iperf/iperf-${VERSION}.tar.gz \
+    && wget https://downloads.es.net/pub/iperf/iperf-${VERSION}.tar.gz.sha256 \
+    && sha256sum -c iperf-${VERSION}.tar.gz.sha256 \
+    && tar xzf iperf-${VERSION}.tar.gz
+
+## Build with hardening flags
+WORKDIR /tmp/iperf-${VERSION}
+RUN ./configure \
+    --prefix=/usr/local \
+    --enable-static-bin \
+    CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2" \
+    LDFLAGS="-Wl,-z,now -Wl,-z,relro" \
+    && make \
+    && make install
+
+## Stage 2: Create minimal runtime image
+FROM $IMAGE_BASE
+
+ARG DATE
+ARG VERSION
+ARG IMAGE_BASE
+ARG TAG
+ARG IMAGE_TARGET
+
+## Reference: OCI Annotations : Pre-Defined Keys 
+## https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+LABEL org.opencontainers.image.base.name="$IMAGE_BASE"
+LABEL org.opencontainers.image.created="$DATE"
+LABEL org.opencontainers.image.description="iPerf3 built from source with hardening flags"
+LABEL org.opencontainers.image.ref.name="$IMAGE_TARGET"
+#LABEL org.opencontainers.image.revision="${REVISION}"
+LABEL org.opencontainers.image.source="https://github.com/esnet/iperf"
+LABEL org.opencontainers.image.title="iperf3"
+LABEL org.opencontainers.image.version="$VERSION"
+
+## Install runtime dependencies
+RUN apk add --no-cache \
+    libstdc++ \
+    openssl
+
+## Create non-root user
+#RUN addgroup -S iperfgroup && adduser -S iperfuser -G iperfgroup
+RUN addgroup -g 1000 agroup && \
+    adduser -u 1000 -G agroup -D auser
+
+## Copy iperf3 binary from builder
+COPY --from=builder /usr/local/bin/iperf3 /usr/local/bin/
+
+## Set up directories with appropriate permissions
+RUN mkdir -p /var/run/iperf3 \
+    && chown auser:agroup /var/run/iperf3 \
+    && chmod 750 /var/run/iperf3
+
+## Drop privileges and set secure defaults
+USER auser
+WORKDIR /var/run/iperf3
+
+## Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD iperf3 -c localhost -p 5201 -t 1 || exit 1
+
+## Expose default iperf3 port
+EXPOSE 5201/tcp
+EXPOSE 5201/udp
+
+## Entrypoint with secure defaults
+ENTRYPOINT ["iperf3"]
+CMD ["-s", "--bind", "0.0.0.0"]
