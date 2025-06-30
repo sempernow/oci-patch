@@ -23,10 +23,10 @@ FROM $img
 
 USER root
 
-## Upgrade libxml2 to a fixed version (2.13.4-r6 or later)
+## Upgrade apk index, then install latest version of declared package and report the version
 RUN apk update && \
     apk upgrade libxml2 && \
-    apk info -v libxml2 | grep libxml2
+    apk info -v libxml2 |grep libxml2
 
 EOH
 
