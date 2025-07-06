@@ -1,0 +1,33 @@
+ARG VERSION=dev
+
+FROM golang:1.24.4-alpine AS builder
+
+ARG VERSION
+
+RUN apk add --no-cache git
+WORKDIR /build
+#RUN git clone https://github.com/FiloSottile/age.git
+RUN git clone https://gitlab.com/sempernow/age.git
+WORKDIR /build/age
+RUN CGO_ENABLED=0 go build -ldflags "-X 'main.Version=${VERSION}'" -o /age ./cmd/age
+
+FROM gcr.io/distroless/static
+
+ARG VERSION
+ARG DATE
+ARG REVISION
+
+COPY --from=builder /age /age
+
+USER root 
+
+ENTRYPOINT ["/age"]
+CMD ["--help"]
+
+LABEL org.opencontainers.image.title="age"
+LABEL org.opencontainers.image.base.name=gcr.io/distroless/static
+LABEL org.opencontainers.image.description="Fork of github.com/FiloSottile/age ${VERSION} has patch CVE-2025-22869 fixed golang.org/x/crypto/ssh v0.35.0"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.created="${DATE}"
+LABEL org.opencontainers.image.source="https://gitlab.com/sempernow/age"
+LABEL org.opencontainers.image.revision="${REVISION}"

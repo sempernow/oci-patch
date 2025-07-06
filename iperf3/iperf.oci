@@ -1,0 +1,96 @@
+ARG VERSION=3.16
+ARG DATE
+
+# Stage 1: Build iperf3 from source with hardening flags
+FROM alpine:3.21.3 AS builder
+
+ARG VERSION
+ARG DATE
+
+# Install build dependencies
+RUN apk add --no-cache \
+    build-base \
+    alpine-sdk \
+    autoconf \
+    automake \
+    libtool \
+    openssl-dev \
+    zlib-dev \
+    linux-headers
+
+# Download and verify iperf3 source
+WORKDIR /tmp
+RUN wget https://downloads.es.net/pub/iperf/iperf-${VERSION}.tar.gz \
+    && wget https://downloads.es.net/pub/iperf/iperf-${VERSION}.tar.gz.sha256 \
+    && sha256sum -c iperf-${VERSION}.tar.gz.sha256 \
+    && tar xzf iperf-${VERSION}.tar.gz
+
+# Build with hardening flags
+WORKDIR /tmp/iperf-${VERSION}
+RUN ./configure \
+    --prefix=/usr/local \
+    --enable-static-bin \
+    CFLAGS="-fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2" \
+    LDFLAGS="-Wl,-z,now -Wl,-z,relro" \
+    && make \
+    && make install
+
+# Stage 2: Create minimal runtime image
+FROM alpine:3.21.3
+
+ARG VERSION
+ARG DATE
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    libstdc++ \
+    openssl
+
+# Create non-root user
+RUN addgroup -S iperfgroup && adduser -S iperfuser -G iperfgroup
+
+# Copy iperf3 binary from builder
+COPY --from=builder /usr/local/bin/iperf3 /usr/local/bin/
+
+# Set up directories with appropriate permissions
+RUN mkdir -p /var/run/iperf3 \
+    && chown iperfuser:iperfgroup /var/run/iperf3 \
+    && chmod 750 /var/run/iperf3
+
+# Drop privileges and set secure defaults
+USER iperfuser
+WORKDIR /var/run/iperf3
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD iperf3 -c localhost -p 5201 -t 1 || exit 1
+
+# Expose default iperf3 port
+EXPOSE 5201/tcp
+EXPOSE 5201/udp
+
+# Entrypoint with secure defaults
+ENTRYPOINT ["iperf3"]
+CMD ["-s", "--bind", "0.0.0.0"]
+
+#FROM gcr.io/distroless/static
+#
+#ARG VERSION
+#ARG DATE
+#ARG REVISION
+#
+#COPY --from=builder /age /age
+#
+#USER root 
+#
+#ENTRYPOINT ["/age"]
+#CMD ["--help"]
+#
+LABEL org.opencontainers.image.title="iperf3"
+#LABEL org.opencontainers.image.base.name=gcr.io/distroless/static
+LABEL org.opencontainers.image.base.name=alpine:3.21.3
+#LABEL org.opencontainers.image.description="Fork of github.com/FiloSottile/age ${VERSION} has patch CVE-2025-22869 fixed golang.org/x/crypto/ssh v0.35.0"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.created="${DATE}"
+#LABEL org.opencontainers.image.source="https://gitlab.com/sempernow/age"
+#LABEL org.opencontainers.image.revision="${REVISION}"

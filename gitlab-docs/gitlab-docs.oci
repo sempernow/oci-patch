@@ -1,0 +1,25 @@
+ARG VERSION=18.0
+ARG DATE
+ARG IMAGE
+
+FROM registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/archives:${VERSION}
+
+ARG VERSION=18.0
+ARG DATE
+ARG IMAGE
+
+USER root
+
+## Upgrade libxml2 to a fixed version (2.13.4-r6 or later)
+RUN apk update && \
+    apk upgrade libxml2 && \
+    apk info -v libxml2 |grep libxml2
+
+## Reference: OCI Annotations : Pre-Defined Keys 
+## https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+LABEL org.opencontainers.image.title="GitLab Product Documentation"
+LABEL org.opencontainers.image.source="https://gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/container_registry/8244403"
+LABEL org.opencontainers.image.base.name="registry.gitlab.com/gitlab-org/technical-writing/docs-gitlab-com/archives:${VERSION}"
+LABEL org.opencontainers.image.ref.name="${IMAGE}"
+LABEL org.opencontainers.image.description="Patch CVE-2025-32414 of libxml2 has fixed version 2.13.4-r6+"
+LABEL org.opencontainers.image.created="${DATE}"
