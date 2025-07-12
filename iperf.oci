@@ -1,3 +1,4 @@
+# https://github.com/esnet/iperf 
 ARG VERSION=3.16
 ARG DATE
 
@@ -73,24 +74,11 @@ EXPOSE 5201/udp
 ENTRYPOINT ["iperf3"]
 CMD ["-s", "--bind", "0.0.0.0"]
 
-#FROM gcr.io/distroless/static
-#
-#ARG VERSION
-#ARG DATE
-#ARG REVISION
-#
-#COPY --from=builder /age /age
-#
-#USER root 
-#
-#ENTRYPOINT ["/age"]
-#CMD ["--help"]
-#
 LABEL org.opencontainers.image.title="iperf3"
 #LABEL org.opencontainers.image.base.name=gcr.io/distroless/static
 LABEL org.opencontainers.image.base.name=alpine:3.21.3
-#LABEL org.opencontainers.image.description="Fork of github.com/FiloSottile/age ${VERSION} has patch CVE-2025-22869 fixed golang.org/x/crypto/ssh v0.35.0"
+LABEL org.opencontainers.image.description="iPerf3 build from source with hardening flags"
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.created="${DATE}"
-#LABEL org.opencontainers.image.source="https://gitlab.com/sempernow/age"
+LABEL org.opencontainers.image.source="https://github.com/esnet/iperf"
 #LABEL org.opencontainers.image.revision="${REVISION}"
