@@ -39,7 +39,8 @@ push(){
     docker push $repo:$tag || return 33
 }
 run(){
-    docker run -it --rm --name $app $repo:$tag "$3" 
+    shift;shift
+    docker run -it --rm --name $app $repo:$tag "$@" 
 }
 
 "$@" || echo "❌  ERR : $?" >&2
