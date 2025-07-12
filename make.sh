@@ -7,7 +7,7 @@
 app=$2
 ver=$3
 repo=gd9h/$app
-date=$(stat --format=%y trivy*$tag*.log 2>/dev/null |cut -d' ' -f1 |head -n1)
+date=$(stat --format=%y trivy*$app*.log 2>/dev/null |cut -d' ' -f1 |head -n1)
 [[ $date ]] || date=$(date -Id)
 tag="${ver}-patch-${date//-/}"
 
