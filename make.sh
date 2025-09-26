@@ -1,7 +1,8 @@
 #!/usr/bin/env bash 
 [[ $3 ]] || {
     echo "  USAGE: ${BASH_SOURCE##*/} "'build|inspect|push|run '"APP VER COMMIT" >&2 
-    echo "         ${BASH_SOURCE##*/} scan REGISTRY/REPO/IMAGE TAG" >&2 
+    echo '         (Build definition is at APP.oci)' >&2 
+    echo "         ${BASH_SOURCE##*/} scan IMAGE" >&2 
 
     exit 11
 }
@@ -14,9 +15,8 @@ date=$(stat --format=%y trivy*$app*.log 2>/dev/null |cut -d' ' -f1 |head -n1)
 tag="${ver}-patch-${date//-/}"
 
 scan(){
-    img="$1:$2"
-    fname=${img////.}
-    trivy image --scanners vuln --severity 'CRITICAL,HIGH' $img \
+    fname=${1////.}
+    trivy image --scanners vuln --severity 'CRITICAL,HIGH' $1 \
         |tee trivy.${fname//:/_}.log
 }
 build(){
