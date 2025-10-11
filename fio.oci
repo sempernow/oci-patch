@@ -1,0 +1,9 @@
+FROM alpine:latest
+
+RUN apk add --no-cache fio && \
+    rm -rf /var/cache/apk/*
+
+WORKDIR /data
+ENTRYPOINT ["fio"]
+CMD ["--help"] 
+
